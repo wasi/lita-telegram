@@ -12,8 +12,8 @@ module Lita
 
       def run
         client.listen do |message|
-          user = Lita::User.find_by_name(message.from.username)
-          user = Lita::User.create(message.from.username) unless user
+          user = Lita::User.find_by_name(message.from.id)
+          user = Lita::User.create(message.from.id, {name: message.from.username, first_name: message.from.first_name, last_name: message.from.last_name}) unless user
 
           chat = Lita::Room.new(message.chat.id)
 
