@@ -22,6 +22,7 @@ module Lita
           message.text ||= ''
           msg = Lita::Message.new(robot, message.text, source)
 
+          log.info "Incoming Message: text=\"#{message.text}\" uid=#{source.room}"
           robot.receive(msg)
         end
       end
