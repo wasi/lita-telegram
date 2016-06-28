@@ -26,11 +26,15 @@ module Lita
           robot.receive(msg)
         end
       end
+
       def send_messages(target, messages)
-        messages.each do |message|
-          log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
-          client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
-          client.api.sendMessage(chat_id: target.room.to_i, text: message)
+        Thread.new do
+          messages.each do |message|
+            log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
+            client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
+            sleep 2
+            client.api.sendMessage(chat_id: target.room.to_i, text: message)
+          end
         end
       end
 
