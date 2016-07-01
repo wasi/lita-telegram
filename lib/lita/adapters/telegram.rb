@@ -29,11 +29,16 @@ module Lita
 
       def send_messages(target, messages)
         Thread.new do
-          messages.each do |message|
-            log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
-            client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
-            sleep 2
-            client.api.sendMessage(chat_id: target.room.to_i, text: message)
+          begin
+            messages.each do |message|
+              log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
+              client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
+              sleep 2
+              client.api.sendMessage(chat_id: target.room.to_i, text: message)
+            end
+          rescue => e
+            log.error e.inspect
+            Rollbar.error(e)
           end
         end
       end
