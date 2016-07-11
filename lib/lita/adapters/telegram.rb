@@ -4,10 +4,22 @@ module Lita
       attr_reader :client
 
       config :telegram_token, type: String, required: true
+      config :botpages_api, type: String, required: false
 
       def initialize(robot)
         super
         @client = ::Telegram::Bot::Client.new(config.telegram_token, logger: ::Logger.new($stdout))
+      end
+
+      def botpage(opts)
+        return unless config.botpages_api
+        conn = Faraday.new(:url => 'https://api.botpages.com') do |faraday|
+          faraday.request  :url_encoded             # form-encode POST params
+          faraday.response :logger                  # log requests to STDOUT
+          faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
+        end
+
+        log.info conn.post("/v1/add_message", { api_key: config.botpages_api}.merge(opts)).body.inspect
       end
 
       def run
@@ -22,6 +34,7 @@ module Lita
           message.text ||= ''
           msg = Lita::Message.new(robot, message.text, source)
 
+          botpage(message: message.text, from: source.room, platform: 'telegram')
           log.info "Incoming Message: text=\"#{message.text}\" uid=#{source.room}"
           robot.receive(msg)
         end
@@ -33,6 +46,7 @@ module Lita
             opts = messages.pop if messages.last.is_a? Hash
             messages.each do |message|
               log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
+              botpage(message: message, to: target.room.to_i, platform: 'telegram')
               client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
               sleep 2
 
