@@ -78,6 +78,7 @@ module Lita
               if user = target.user
                 user.metadata["blocked"] = "true"
                 user.save
+                log.error "saved blocked for user: #{user.id}"
               end
             elsif e.error_code.to_s == "429"
               attempts += 1
