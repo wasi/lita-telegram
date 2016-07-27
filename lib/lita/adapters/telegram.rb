@@ -13,13 +13,18 @@ module Lita
 
       def botpage(opts)
         return unless config.botpages_api
-        conn = Faraday.new(:url => 'https://api.botpages.com') do |faraday|
-          faraday.request  :url_encoded             # form-encode POST params
-          faraday.response :logger                  # log requests to STDOUT
-          faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
-        end
+        begin
+          conn = Faraday.new(:url => 'https://api.botpages.com') do |faraday|
+            faraday.request  :url_encoded             # form-encode POST params
+            faraday.response :logger                  # log requests to STDOUT
+            faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
+          end
 
-        log.info conn.post("/v1/add_message", { api_key: config.botpages_api}.merge(opts)).body.inspect
+          log.info conn.post("/v1/add_message", { api_key: config.botpages_api}.merge(opts)).body.inspect
+        rescue => e
+          log.error e.inspect
+          Rollbar.error(e)
+        end
       end
 
       def run
@@ -37,18 +42,22 @@ module Lita
           botpage(message: message.text, from: source.room, platform: 'telegram')
           log.info "Incoming Message: text=\"#{message.text}\" uid=#{source.room}"
           robot.receive(msg)
+
+          user.metadata["blocked"] = nil
+          user.save
         end
       end
 
       def send_messages(target, messages)
         Thread.new do
+          attempts = 0
           begin
             opts = messages.pop if messages.last.is_a? Hash
             messages.each do |message|
               log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
               botpage(message: message, to: target.room.to_i, platform: 'telegram')
               client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
-              sleep 2
+              # sleep 2
 
               if message == messages.last && opts
                 markup = ::Telegram::Bot::Types::ReplyKeyboardMarkup.new(keyboard: opts[:keyboard], one_time_keyboard: true)
@@ -57,6 +66,29 @@ module Lita
               end
 
               client.api.sendMessage(chat_id: target.room.to_i, text: message, reply_markup: markup)
+
+              if user = target.user
+                user.metadata["blocked"] = nil
+                user.save
+              end
+            end
+          rescue ::Telegram::Bot::Exceptions::ResponseError => e
+            log.error e.inspect
+            if e.error_code.to_s == "403"
+              if user = target.user
+                user.metadata["blocked"] = "true"
+                user.save
+              end
+            elsif e.error_code.to_s == "429"
+              attempts += 1
+              unless attempts > 2
+                sleep 2
+                retry
+              else
+                Rollbar.error(e)
+              end
+            else
+              Rollbar.error(e)
             end
           rescue => e
             log.error e.inspect
