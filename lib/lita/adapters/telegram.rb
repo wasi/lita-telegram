@@ -57,7 +57,7 @@ module Lita
               log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
               botpage(message: message, to: target.room.to_i, platform: 'telegram')
               client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
-              # sleep 2
+              sleep 2
 
               if message == messages.last && opts
                 markup = ::Telegram::Bot::Types::ReplyKeyboardMarkup.new(keyboard: opts[:keyboard], one_time_keyboard: true)
