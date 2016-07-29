@@ -39,9 +39,10 @@ module Lita
           message.text ||= ''
           msg = Lita::Message.new(robot, message.text, source)
 
-          botpage(message: message.text, from: source.room, platform: 'telegram')
           log.info "Incoming Message: text=\"#{message.text}\" uid=#{source.room}"
           robot.receive(msg)
+
+          botpage(message: message.text, from: source.room, platform: 'telegram')
 
           user.metadata["blocked"] = nil
           user.save
@@ -55,7 +56,6 @@ module Lita
             opts = messages.pop if messages.last.is_a? Hash
             messages.each do |message|
               log.info "Outgoing Message: text=\"#{message}\" uid=#{target.room.to_i}"
-              botpage(message: message, to: target.room.to_i, platform: 'telegram')
               client.api.sendChatAction(chat_id: target.room.to_i, action: 'typing')
               sleep 2
 
@@ -66,6 +66,7 @@ module Lita
               end
 
               client.api.sendMessage(chat_id: target.room.to_i, text: message, reply_markup: markup)
+              botpage(message: message, to: target.room.to_i, platform: 'telegram')
 
               if user = target.user
                 user.metadata["blocked"] = nil
