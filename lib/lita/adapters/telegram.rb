@@ -72,7 +72,7 @@ module Lita
                 markup = ::Telegram::Bot::Types::ReplyKeyboardHide.new(hide_keyboard: true)
               end
 
-              client.api.sendMessage(chat_id: target.room.to_i, text: message, reply_markup: markup)
+              client.api.sendMessage(chat_id: target.room.to_i, text: message, reply_markup: markup, parse_mode: "Markdown", disable_web_page_preview: true)
               botpage(message: message, to: target.room.to_i, platform: 'telegram')
 
               if user = target.user
