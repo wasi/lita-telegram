@@ -60,7 +60,14 @@ module Lita
               sleep 2
 
               if message == messages.last && opts
-                markup = ::Telegram::Bot::Types::ReplyKeyboardMarkup.new(keyboard: opts[:keyboard], one_time_keyboard: true)
+                if opts[:keyboard].present?
+                  markup = ::Telegram::Bot::Types::ReplyKeyboardMarkup.new(keyboard: opts[:keyboard], one_time_keyboard: true)
+                else
+                  kb = opts[:inline_keyboard].map do |keyboard|
+                    ::Telegram::Bot::Types::InlineKeyboardButton.new(text: keyboard.first, url: keyboard.last)
+                  end
+                  markup = ::Telegram::Bot::Types::InlineKeyboardMarkup.new(inline_keyboard: kb)
+                end
               else
                 markup = ::Telegram::Bot::Types::ReplyKeyboardHide.new(hide_keyboard: true)
               end
